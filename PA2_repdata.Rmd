@@ -36,8 +36,6 @@ The *BGN_DATE* column class is changed from *chr* into *Date* to allow easier an
 ```{r convert, echo=TRUE, cache=TRUE}
 #convert beginning date column into date class
 storm[,2] <- as.Date(storm[,2],format='%m/%d/%Y %H:%M:%S')
-#convert evtype to factor class
-storm[,"EVTYPE"] <- as.factor(storm[,"EVTYPE"])
 ```
 
 Data is subset with the relevant columns. Since we are looking at data across the United States, location data is irrelevant. *Injuries* and *Fatalities* columns provide data about population health. *Property Damage* and *Crop Damage* columns provide economic data. The *Event Type* column gives us which event caused the problems.  
@@ -96,4 +94,21 @@ stormSub$CROPEXP[stormSub$CROPDMGEXP == "2"] <- 100
 stormSub$CROPEXP[stormSub$CROPDMGEXP == "?"] <- 0
 ```
 
-Now, we will create a new column with the multiplication of *PROPDMG* column and *PROPEXP* columns. We will do the same for the Crop Damage data.
+Now, we will create a new column with the multiplication of *PROPDMG* column and *PROPEXP* columns. We will do the same for the Crop Damage data.  
+```{r mutiply, echo=TRUE, cache=TRUE}
+stormSub$PropDamage <- stormSub$PROPDMG * stormSub$PROPEXP
+stormSub$CropDamage <- stormSub$CROPDMG * stormSub$CROPEXP
+```
+
+We will now subset this data frame to reduce the number of columns as we no longer need the columns such as *PROPEXP*.  
+```{r lesscolumns, echo=TRUE, cache=TRUE}
+stormR <- subset(stormSub, select=c(EVTYPE, BGN_DATE, FATALITIES, INJURIES, PropDamage, CropDamage))
+```
+  
+According to the National Weather Service, there are 48 event types. Our data frame shows 945 data frames. We need to find a way to reduce the 945 to 48 as much as we can.  
+
+We could start by reducing our data frame by removing rows where injuries, fatalities and property and crop damage is equal to 0. Storm Effects to Population Health can be measured from fatalities and injuries counts. Economic effects can be measured from property damage and crop damage values. We can group the relevant non-zero columns in separate data frames.  
+```{r lessrows, echo=TRUE, cache=TRUE}
+stormHealth <- subset(stormR, (FATALITIES != 0) | (INJURIES != 0))
+stormEcon <- subset(stormR, (PropDamage != 0) | (CropDamage != 0))
+```
