@@ -46,8 +46,8 @@ Data is subset with the relevant columns. Since we are looking at data across th
 stormSub <- subset(storm, select=c(EVTYPE, BGN_DATE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP))
 ```
 
-Let's also look at years that we want to include in the processing. Earlier years usually do not have accurate or well-kept data. It may prove worthwile to not include some earlier years in our analysis.
-```{r subsetyear, echo=TRUE, cache=TRUE}
+Let's also look at years that we want to include in the processing. Earlier years usually do not have accurate or well-kept data. It may prove worthwile to not include some earlier years in our analysis.  
+```{r subsetyear, echo=TRUE, cache=TRUE, fig.height=6, fig.width=8}
 #draw a histogram to see how much data was gathered each year
 hist(stormSub$BGN_DATE, main="Data Points per Year", xlab="Date", ylab="Frequency", col = "steelblue", breaks = 25)
 #subset all of the data with the dates after 1989
@@ -59,3 +59,41 @@ Looking at *Property Damage Exponential* and *Crop Damage Exponential* columns t
 paste(unique(stormSub$PROPDMGEXP))
 paste(unique(stormSub$CROPDMGEXP))
 ```
+
+In the EXP data columns, the "M" corresponds to a million, "B" to a billion, "K" to a thousand, "H" to a hundred, and the numbers correspond to the exponential value of 10 (as in "10 to the power of x"). We need to make these conversions so we can compare the data better. The remainder of the values "?,+,-" will be assumed as 0 to be able to ignore possibly wrong data recordings and simplify the analysis.  
+```{r EXP, echo=TRUE, cache=TRUE}
+#create a new column with numeral values for Property Damage Exponential column
+stormSub$PROPEXP[stormSub$PROPDMGEXP == ""] <- 1
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "K"] <- 1000
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "M"] <- 1e+06
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "B"] <- 1e+09
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "m"] <- 1e+06
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "0"] <- 1
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "5"] <- 1e+05
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "6"] <- 1e+06
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "4"] <- 1e+04
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "2"] <- 100
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "3"] <- 1000
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "h"] <- 100
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "7"] <- 1e+07
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "H"] <- 100
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "1"] <- 10
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "8"] <- 1e+08
+#assume 0 for other values
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "+"] <- 0
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "-"] <- 0
+stormSub$PROPEXP[stormSub$PROPDMGEXP == "?"] <- 0
+#create a new column with numeral values for Crop Damage Exponential column
+stormSub$CROPEXP[stormSub$CROPDMGEXP == ""] <- 1
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "K"] <- 1000
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "M"] <- 1e+06
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "B"] <- 1e+09
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "m"] <- 1e+06
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "0"] <- 1
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "k"] <- 1000
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "2"] <- 100
+#assume 0 for other values
+stormSub$CROPEXP[stormSub$CROPDMGEXP == "?"] <- 0
+```
+
+Now, we will create a new column with the multiplication of *PROPDMG* column and *PROPEXP* columns. We will do the same for the Crop Damage data.
