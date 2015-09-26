@@ -184,7 +184,22 @@ stormEcon <- subset(stormR, (PropDamage != 0) | (CropDamage != 0), select = c(EV
 stormEcon$Total <- stormEcon$PropDamage + stormEcon$CropDamage
 ```
 
-Let's now group the two data frames by event types and then order them descending with *Total* column.  
-```{r groupsort, echo=TRUE, cache=TRUE}
-
+Let's now group the two data frames by event types; summarize and then order them descending with *Total* column.  
+```{r, message=FALSE}
+#import dplyr library for sort
+library(dplyr)
 ```
+```{r groupsort, echo=TRUE, cache=TRUE}
+#group the data frames by evtype
+stormHealthG <- group_by(stormHealth, EVTYPE)
+stormEconG <- group_by(stormEcon, EVTYPE)
+#summarize these grouped tables with the mean of steps for each day type and interval
+stormHealthSum <- summarize(stormHealthG, TotalHealthProblems = sum(Total))
+stormEconSum <- summarize(stormEconG, TotalEconDamage = sum(Total))
+#sort the data frames
+stormHealthSum <- arrange(stormHealthSum, desc(TotalHealthProblems))
+stormEconSum <- arrange(stormEconSum, desc(TotalEconDamage))
+```
+
+## Results  
+
