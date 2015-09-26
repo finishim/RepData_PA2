@@ -1,24 +1,61 @@
 ---
-title: "PA2_repdata"
+title: "Most Harmful Events with Respect to Population Health and The Events with Greatest Economic Consequences"
 author: "Nazmi Anik"
 date: "Monday, September 21, 2015"
 output: html_document
 ---
 
-## Loading and preprocessing the data  
+## Synopsis  
 
-```{r, echo=TRUE}
+## Loading and Preprocessing the Data  
+
+The data was obtained from the [Coursera Assignment Page] (https://class.coursera.org/repdata-032/human_grading/view/courses/975145/assessments/4/submissions). The [data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) for this assignment came in the form of a comma-separated-value file compressed via the bzip2 algorithm to reduce its size.  
+
+### Reading the Data  
+
+First the raw data is downloaded from the [link](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) that was provided.  
+```{r download, echo=TRUE, cache=TRUE}
+#if file is not already downloaded, download it
 if(!file.exists("stormdata.csv.bz2")){
     url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
-    download.file(url, destfile = ".\\stormdata.csv.bz2", mode = "wb")
+    download.file(url, destfile = "stormdata.csv.bz2", mode = "wb")
 }
-storm <- read.csv("stormdata.csv.bz2")
+```
+  
+The data, then was read into a data frame using the *read.csv* function.  
+```{r read, echo=TRUE, cache=TRUE}
+#read the data into a data frame
+storm <- read.csv("stormdata.csv.bz2", stringsAsFactors=FALSE, na.strings="NA")
+
+head(storm)
 ```
 
-You can also embed plots, for example:
+### Processing the Data  
 
-```{r, echo=FALSE}
-plot(cars)
+The *BGN_DATE* column class is changed from *chr* into *Date* to allow easier analysis of the data frame. Also the *EVTYPE* column is converted into factor class for easy analysis.  
+```{r convert, echo=TRUE, cache=TRUE}
+#convert beginning date column into date class
+storm[,2] <- as.Date(storm[,2],format='%m/%d/%Y %H:%M:%S')
+#convert evtype to factor class
+storm[,"EVTYPE"] <- as.factor(storm[,"EVTYPE"])
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Data is subset with the relevant columns. Since we are looking at data across the United States, location data is irrelevant. *Injuries* and *Fatalities* columns provide data about population health. *Property Damage* and *Crop Damage* columns provide economic data. The *Event Type* column gives us which event caused the problems.  
+```{r subset, echo=TRUE, cache=TRUE}
+#subset all of the data with the selected columns
+stormSub <- subset(storm, select=c(EVTYPE, BGN_DATE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP))
+```
+
+Let's also look at years that we want to include in the processing. Earlier years usually do not have accurate or well-kept data. It may prove worthwile to not include some earlier years in our analysis.
+```{r subsetyear, echo=TRUE, cache=TRUE}
+#draw a histogram to see how much data was gathered each year
+hist(stormSub$BGN_DATE, main="Data Points per Year", xlab="Date", ylab="Frequency", col = "steelblue", breaks = 25)
+#subset all of the data with the dates after 1989
+stormSub <- subset(stormSub, BGN_DATE > "1988-12-31")
+```
+
+Looking at *Property Damage Exponential* and *Crop Damage Exponential* columns to figure out a way to compute the corresponding damage amount.  
+```{r unique, echo=TRUE, cache=TRUE}
+paste(unique(stormSub$PROPDMGEXP))
+paste(unique(stormSub$CROPDMGEXP))
+```
