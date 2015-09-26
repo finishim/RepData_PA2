@@ -24,7 +24,7 @@ The data, then was read into a data frame using the *read.csv* function.
 ```{r read, echo=TRUE, cache=TRUE}
 #read the data into a data frame
 storm <- read.csv("stormdata.csv.bz2", stringsAsFactors=FALSE, na.strings="NA")
-
+str(storm)
 head(storm)
 ```
 
@@ -39,7 +39,8 @@ storm[,2] <- as.Date(storm[,2],format='%m/%d/%Y %H:%M:%S')
 Data is subset with the relevant columns. Since we are looking at data across the United States, location data is irrelevant. *Injuries* and *Fatalities* columns provide data about population health. *Property Damage* and *Crop Damage* columns provide economic data. The *Event Type* column gives us which event caused the problems.  
 ```{r subset, echo=TRUE, cache=TRUE}
 #subset all of the data with the selected columns
-stormSub <- subset(storm, select=c(EVTYPE, BGN_DATE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP))
+stormSub <- subset(storm, select=c(EVTYPE, BGN_DATE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP), stringsAsFactors=FALSE)
+str(stormSub)
 ```
 
 Let's also look at years that we want to include in the processing. Earlier years usually do not have accurate or well-kept data. It may prove worthwile to not include some earlier years in our analysis.  
@@ -47,7 +48,7 @@ Let's also look at years that we want to include in the processing. Earlier year
 #draw a histogram to see how much data was gathered each year
 hist(stormSub$BGN_DATE, main="Data Points per Year", xlab="Date", ylab="Frequency", col = "steelblue", breaks = 25)
 #subset all of the data with the dates after 1989
-stormSub <- subset(stormSub, BGN_DATE > "1988-12-31")
+stormSub <- subset(stormSub, BGN_DATE > "1988-12-31", stringsAsFactors=FALSE)
 ```
 
 Looking at *Property Damage Exponential* and *Crop Damage Exponential* columns to figure out a way to compute the corresponding damage amount.  
@@ -96,17 +97,19 @@ Now, we will create a new column with the multiplication of *PROPDMG* column and
 ```{r mutiply, echo=TRUE, cache=TRUE}
 stormSub$PropDamage <- stormSub$PROPDMG * stormSub$PROPEXP
 stormSub$CropDamage <- stormSub$CROPDMG * stormSub$CROPEXP
+str(stormSub)
 ```
 
 We will now subset this data frame to reduce the number of columns as we no longer need the columns such as *PROPEXP*.  
 ```{r lesscolumns, echo=TRUE, cache=TRUE}
-stormR <- subset(stormSub, select=c(EVTYPE, BGN_DATE, FATALITIES, INJURIES, PropDamage, CropDamage))
+stormR <- stormSub[c("EVTYPE", "BGN_DATE", "FATALITIES", "INJURIES", "PropDamage", "CropDamage")]
+str(stormR)
 ```
   
 According to the National Weather Service, there are 48 event types. The list of events is provided in page 6 of NATIONAL WEATHER SERVICE INSTRUCTION 10-1605 [document](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf).Our data frame shows 945 data frames. We need to find a way to reduce the 945 to 48 as much as we can.  
 
 If the *EVTYPE* columns include any of the 48 event names, we will replace the name with that matched official name to make grouping easier and the analysis more accurate. For example "Winter Weather/Mix" includes "Winter Weather", which is one of the 48 event types. We would replace "Winter Weather/Mix" with "Winter Weather".  
-```{r grep, echo=TRUE, cache=TRUE}
+```{r grep, echo=TRUE, cache=TRUE, message=FALSE}
 stormR$EVTYPE[grep("LOW TIDE",stormR$EVTYPE)]<-"Astronomical Low Tide"
 stormR$EVTYPE[grep("AVALANCHE",stormR$EVTYPE)]<-"Avalanche"
 stormR$EVTYPE[grep("BLIZZARD",stormR$EVTYPE)]<-"Blizzard"
@@ -164,7 +167,7 @@ length(paste(unique(stormR$EVTYPE)))
 ```
 
 We can make some more groupings and check again:  
-```{r moregrep, echo=TRUE, cache=TRUE}
+```{r moregrep, echo=TRUE, cache=TRUE, message=FALSE}
 stormR$EVTYPE[grep("^TSTM",stormR$EVTYPE)]<-"Thunderstorm Wind"
 stormR$EVTYPE[grep("(UNUSUALLY|EXTREME|RECORD|UNSEASONABLY|VERY) (LOW|COLD|WINDCHILL|COOL)",stormR$EVTYPE)]<-"Extreme Cold/Wind Chill"
 stormR$EVTYPE[grep("(UNUSUALLY|EXTREME|RECORD|UNSEASONABLY|HIGH|VERY) (WARM|WARMTH|HEAT|TEMPERATURE)",stormR$EVTYPE)]<-"Excessive Heat"
@@ -203,3 +206,22 @@ stormEconSum <- arrange(stormEconSum, desc(TotalEconDamage))
 
 ## Results  
 
+### Impact on Public Health in United States
+The result we are trying to get at is which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health. For this purpose, we have processed our data in a way to show the total number of fatalities and injuries caused by different evemts.  
+
+```{r, message=FALSE}
+#import ggplot library
+library(ggplot2)
+```
+
+Let's only look at the top 5 event types:  
+```{r health, echo=true, cache=TRUE, fig.height=6, fig.width=8}
+#subset the top 5 events
+stormHealthSum5 <- stormHealthSum[1:5,]
+stormHealthSum5
+g <- ggplot(data = stormHealthSum5, aes(x=EVTYPE,y=TotalHealthProblems,fill=EVTYPE)) + 
+    geom_bar(stat = "identity") + 
+    xlab("Event Type") + 
+    ylab("Total Number of Fatalities and Injuries") + 
+    ggtitle("Weather Events Impact on Public Health")
+```
