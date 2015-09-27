@@ -14,7 +14,7 @@ Our goal is to analyze the impact of weather events on public health and economy
 
 ## Reading the Data  
 
-The data was obtained from the [Coursera Assignment Page] (https://class.coursera.org/repdata-032/human_grading/view/courses/975145/assessments/4/submissions). The [data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) for this assignment came in the form of a comma-separated-value file compressed via the bzip2 algorithm to reduce its size.  
+The data was obtained from the [Coursera Assignment Page](https://class.coursera.org/repdata-032/human_grading/view/courses/975145/assessments/4/submissions). The [data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) for this assignment came in the form of a comma-separated-value file compressed via the bzip2 algorithm to reduce its size.  
 
 First the raw data is downloaded from the [link](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) that was provided.  
 ```{r download, echo=TRUE, cache=TRUE}
@@ -29,7 +29,6 @@ The data, then was read into a data frame using the *read.csv* function.
 ```{r read, echo=TRUE, cache=TRUE}
 #read the data into a data frame
 storm <- read.csv("stormdata.csv.bz2", stringsAsFactors=FALSE, na.strings="NA")
-str(storm)
 head(storm)
 ```
 
@@ -40,6 +39,8 @@ The *BGN_DATE* column class is changed from *chr* into *Date* to allow easier an
 #convert beginning date column into date class
 storm[,2] <- as.Date(storm[,2],format='%m/%d/%Y %H:%M:%S')
 ```
+
+### Removing Unused Columns  
 
 Data is subset with the relevant columns. Since we are looking at data across the United States, location data is irrelevant. *Injuries* and *Fatalities* columns provide data about population health. *Property Damage* and *Crop Damage* columns provide economic data. The *Event Type* column gives us which event caused the problems.  
 ```{r subset, echo=TRUE, cache=TRUE}
@@ -55,6 +56,8 @@ hist(stormSub$BGN_DATE, main="Data Points per Year", xlab="Date", ylab="Frequenc
 #subset all of the data with the dates after 1989
 stormSub <- subset(stormSub, BGN_DATE > "1988-12-31", stringsAsFactors=FALSE)
 ```
+
+### Creating New Useful Columns  
 
 Looking at *Property Damage Exponential* and *Crop Damage Exponential* columns to figure out a way to compute the corresponding damage amount.  
 ```{r unique, echo=TRUE, cache=TRUE}
@@ -110,11 +113,13 @@ We will now subset this data frame to reduce the number of columns as we no long
 stormR <- stormSub[c("EVTYPE", "BGN_DATE", "FATALITIES", "INJURIES", "PropDamage", "CropDamage")]
 str(stormR)
 ```
-  
+
+### Reducing Number of Variables  
+
 According to the National Weather Service, there are 48 event types. The list of events is provided in page 6 of NATIONAL WEATHER SERVICE INSTRUCTION 10-1605 [document](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf).Our data frame shows 945 data frames. We need to find a way to reduce the 945 to 48 as much as we can.  
 
 If the *EVTYPE* columns include any of the 48 event names, we will replace the name with that matched official name to make grouping easier and the analysis more accurate. For example "Winter Weather/Mix" includes "Winter Weather", which is one of the 48 event types. We would replace "Winter Weather/Mix" with "Winter Weather".  
-```{r grep, echo=TRUE}
+```{r grep, echo=TRUE, cache=TRUE}
 stormR$EVTYPE[grep("LOW TIDE",stormR$EVTYPE)]<-"Astronomical Low Tide"
 stormR$EVTYPE[grep("AVALANCHE",stormR$EVTYPE)]<-"Avalanche"
 stormR$EVTYPE[grep("BLIZZARD",stormR$EVTYPE)]<-"Blizzard"
@@ -182,6 +187,8 @@ stormR$EVTYPE[grep("^( WIND|WND|.* WIND|WIND.*)",stormR$EVTYPE)]<-"High Wind"
 length(paste(unique(stormR$EVTYPE)))
 ```
 
+### Removing Rows without Relevant Data  
+
 We could then reduce our data frame by removing rows where injuries, fatalities and property and crop damage is equal to zero. Storm Effects to Population Health can be measured from fatalities and injuries counts. Economic effects can be measured from property damage and crop damage values. We can group the relevant non-zero columns in separate data frames.  
 ```{r lessrows, echo=TRUE, cache=TRUE}
 stormHealth <- subset(stormR, (FATALITIES != 0) | (INJURIES != 0), select = c(EVTYPE, BGN_DATE, FATALITIES, INJURIES))
@@ -191,6 +198,8 @@ stormEcon <- subset(stormR, (PropDamage != 0) | (CropDamage != 0), select = c(EV
 #add new column showing total damage
 stormEcon$Total <- stormEcon$PropDamage + stormEcon$CropDamage
 ```
+
+### Group and Sort Data in a Useful Way  
 
 Let's now group the two data frames by event types; summarize and then order them descending with *Total* column.  
 ```{r, message=FALSE}
